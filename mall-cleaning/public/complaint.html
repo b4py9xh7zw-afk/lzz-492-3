@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>顾客意见反馈</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:30px 14px}
+  .card{background:#fff;border-radius:16px;padding:26px;width:100%;max-width:460px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:#64748b;font-size:13px;margin-bottom:18px}
+  label{font-size:13px;color:#475569;display:block;margin:12px 0 5px}
+  select,input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit}
+  textarea{resize:vertical;min-height:96px}
+  .btn{background:#2563eb;color:#fff;border:none;padding:13px;border-radius:10px;font-size:16px;width:100%;margin-top:18px;cursor:pointer}
+  .err{color:#dc2626;font-size:13px;margin-top:8px}
+  .ok{text-align:center;padding:30px 0}
+  .ok .icon{font-size:52px}
+  .ok h2{font-size:18px;margin:10px 0 6px}
+  .ok p{color:#64748b;font-size:14px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="formView">
+    <h1>📝 顾客意见反馈</h1>
+    <div class="sub">如发现卫生问题请告诉我们,系统将自动追溯最近巡检记录并通知保洁主管</div>
+    <label>问题点位</label>
+    <select id="zone"></select>
+    <label>问题描述 *</label>
+    <textarea id="content" placeholder="请描述脏污情况,如: 地面有积水、垃圾桶满溢等"></textarea>
+    <label>联系方式(选填)</label>
+    <input id="contact" placeholder="便于我们反馈处理结果">
+    <button class="btn" onclick="submit()">提交反馈</button>
+    <div class="err" id="err"></div>
+  </div>
+  <div id="okView" class="ok" hidden>
+    <div class="icon">✅</div>
+    <h2>反馈已受理</h2>
+    <p>受理编号 <b id="okId"></b>,我们已通知保洁主管跟进处理,<br>感谢您的监督!</p>
+    <button class="btn" onclick="location.reload()">继续反馈</button>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+async function init() {
+  const zones = await (await fetch('/api/zones')).json();
+  const preset = new URLSearchParams(location.search).get('zone');
+  const byFloor = {};
+  zones.forEach(z => (byFloor[z.floor] = byFloor[z.floor] || []).push(z));
+  $('#zone').innerHTML = Object.keys(byFloor).sort().map(f =>
+    `<optgroup label="${f}">` + byFloor[f].map(z =>
+      `<option value="${z.code}" ${z.code === preset ? 'selected' : ''}>${z.name}(${z.type_label})</option>`).join('') + '</optgroup>').join('');
+}
+async function submit() {
+  $('#err').textContent = '';
+  try {
+    const r = await fetch('/api/complaints', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zone_code: $('#zone').value, content: $('#content').value, contact: $('#contact').value }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '提交失败');
+    $('#okId').textContent = 'C-' + String(d.id).padStart(4, '0');
+    $('#formView').hidden = true; $('#okView').hidden = false;
+  } catch (e) { $('#err').textContent = e.message; }
+}
+init();
+</script>
+</body>
+</html>

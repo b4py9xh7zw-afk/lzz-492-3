@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>保洁巡检系统 · 管理端</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f1f5f9;color:#1e293b}
+  header{background:#1e3a8a;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:18px}
+  header .links{margin-left:auto;display:flex;gap:14px;font-size:14px}
+  header a{color:#bfdbfe;text-decoration:none}
+  header a:hover{color:#fff}
+  .wrap{max-width:1180px;margin:20px auto;padding:0 16px}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .tabs button{border:1px solid #cbd5e1;background:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px}
+  .tabs button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+  .panel{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .panel h2{font-size:16px;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px 10px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:middle}
+  th{background:#f8fafc;color:#475569;font-weight:600;white-space:nowrap}
+  .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;white-space:nowrap}
+  .b-restroom{background:#dbeafe;color:#1d4ed8}.b-dining{background:#ffedd5;color:#c2410c}.b-escalator{background:#dcfce7;color:#15803d}
+  .s-pending{background:#fef9c3;color:#a16207}.s-done{background:#dcfce7;color:#15803d}.s-missed{background:#fee2e2;color:#b91c1c}
+  .c-open{background:#fee2e2;color:#b91c1c}.c-processing{background:#fef9c3;color:#a16207}.c-resolved{background:#dcfce7;color:#15803d}
+  .btn{background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px}
+  .btn:hover{background:#1d4ed8}.btn.sm{padding:4px 10px;font-size:13px}.btn.gray{background:#64748b}.btn.red{background:#dc2626}
+  input,select,textarea{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit}
+  label{font-size:13px;color:#475569;display:block;margin-bottom:4px}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+  .zone-picker{border:1px solid #e2e8f0;border-radius:8px;padding:10px;max-height:220px;overflow:auto}
+  .zone-picker .floor-group{margin-bottom:8px}
+  .zone-picker .floor-title{font-size:13px;font-weight:600;color:#334155;margin:4px 0}
+  .zone-chip{display:inline-flex;align-items:center;gap:4px;border:1px solid #cbd5e1;border-radius:6px;padding:3px 8px;margin:2px;font-size:13px;cursor:pointer;user-select:none}
+  .zone-chip.sel{background:#2563eb;color:#fff;border-color:#2563eb}
+  .quick button{margin-right:6px}
+  .thumb{width:64px;height:48px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 20px;border-radius:8px;z-index:99;display:none}
+  .complaint{border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px}
+  .trace{background:#f8fafc;border-left:3px solid #2563eb;padding:10px 12px;margin-top:10px;font-size:13px;border-radius:0 8px 8px 0}
+  .muted{color:#64748b;font-size:13px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #loginView{max-width:360px;margin:10vh auto;background:#fff;padding:28px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+  #loginView h1{font-size:20px;margin-bottom:4px}
+  #loginView .sub{color:#64748b;font-size:13px;margin-bottom:18px}
+  #loginView input{width:100%;margin-bottom:12px}
+  #loginView .btn{width:100%}
+  .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal-mask img{max-width:92vw;max-height:88vh;border-radius:8px}
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <h1>保洁巡检系统</h1>
+  <div class="sub">主管管理端登录(演示账号 admin / admin123)</div>
+  <input id="loginUser" placeholder="用户名" value="admin">
+  <input id="loginPass" type="password" placeholder="密码" value="admin123">
+  <button class="btn" onclick="doLogin()">登 录</button>
+  <div id="loginErr" class="muted" style="color:#dc2626;margin-top:8px"></div>
+</div>
+
+<div id="app" hidden>
+<header>
+  <h1>🏬 商场保洁巡检系统 · 管理端</h1>
+  <div class="links">
+    <a href="/screen.html" target="_blank">📺 大屏</a>
+    <a href="/mobile.html" target="_blank">📱 员工端</a>
+    <a href="/complaint.html" target="_blank">📝 投诉页</a>
+    <a href="/qrcodes.html" target="_blank">🖨️ 二维码</a>
+    <a href="javascript:logout()">退出(<span id="meName"></span>)</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="tabs">
+    <button data-tab="schedule" class="on">排班管理</button>
+    <button data-tab="zones">点位管理</button>
+    <button data-tab="inspections">巡检记录</button>
+    <button data-tab="complaints">投诉追踪 <span id="openCount" class="badge c-open" style="display:none"></span></button>
+  </div>
+
+  <!-- 排班管理 -->
+  <section id="tab-schedule">
+    <div class="panel">
+      <h2>① 分配巡检任务</h2>
+      <div class="row" style="margin-bottom:8px">
+        <span class="muted">快捷选择:</span>
+        <span class="quick">
+          <button class="btn sm gray" onclick="pickType('restroom')">洗手间</button>
+          <button class="btn sm gray" onclick="pickType('dining')">餐饮区</button>
+          <button class="btn sm gray" onclick="pickType('escalator')">扶梯口</button>
+          <button class="btn sm gray" onclick="pickType(null)">全不选</button>
+        </span>
+      </div>
+      <div class="zone-picker" id="zonePicker"></div>
+      <div class="form-grid" style="margin-top:12px">
+        <div><label>保洁员</label><select id="fCleaner" style="width:100%"></select></div>
+        <div><label>日期</label><input id="fDate" type="date" style="width:100%"></div>
+        <div><label>开始时间</label><input id="fStart" type="time" style="width:100%"></div>
+        <div><label>截止时间</label><input id="fDeadline" type="time" style="width:100%"></div>
+        <div><button class="btn" style="width:100%" onclick="createTasks()">创建任务</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>② 任务列表</h2>
+      <div class="row" style="margin-bottom:10px">
+        <label style="margin:0">日期</label><input type="date" id="qDate" onchange="loadTasks()">
+        <select id="qStatus" onchange="loadTasks()">
+          <option value="">全部状态</option><option value="pending">待巡检</option>
+          <option value="done">已完成</option><option value="missed">已超时</option>
+        </select>
+        <button class="btn sm gray" onclick="loadTasks()">刷新</button>
+        <span class="muted" id="taskSummary"></span>
+      </div>
+      <div style="overflow:auto"><table>
+        <thead><tr><th>时间窗</th><th>点位</th><th>楼层</th><th>类型</th><th>保洁员</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody id="taskBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- 点位管理 -->
+  <section id="tab-zones" hidden>
+    <div class="panel">
+      <h2>新增点位</h2>
+      <div class="form-grid">
+        <div><label>点位编码(唯一,用于二维码)</label><input id="zCode" placeholder="如 5F-WS-E"></div>
+        <div><label>点位名称</label><input id="zName" placeholder="如 5F 东侧洗手间"></div>
+        <div><label>类型</label><select id="zType"><option value="restroom">洗手间</option><option value="dining">餐饮区</option><option value="escalator">扶梯口</option></select></div>
+        <div><label>楼层</label><input id="zFloor" placeholder="如 5F"></div>
+        <div><button class="btn" style="width:100%" onclick="addZone()">添加</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>点位列表 <span class="muted">(二维码打印请前往「二维码」页)</span></h2>
+      <table><thead><tr><th>编码</th><th>名称</th><th>类型</th><th>楼层</th></tr></thead><tbody id="zoneBody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- 巡检记录 -->
+  <section id="tab-inspections" hidden>
+    <div class="panel">
+      <h2>巡检记录</h2>
+      <div class="row" style="margin-bottom:10px">
+        <label style="margin:0">日期</label><input type="date" id="iDate" onchange="loadInspections()">
+        <button class="btn sm gray" onclick="loadInspections()">刷新</button>
+      </div>
+      <div style="overflow:auto"><table>
+        <thead><tr><th>签到时间</th><th>点位</th><th>类型</th><th>保洁员</th><th>现场照片</th><th>备注</th></tr></thead>
+        <tbody id="inspBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- 投诉追踪 -->
+  <section id="tab-complaints" hidden>
+    <div class="panel">
+      <h2>顾客投诉与巡检追溯</h2>
+      <div id="complaintList"></div>
+    </div>
+  </section>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-mask" id="imgModal" onclick="this.style.display='none'"><img id="imgModalImg"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const token = () => localStorage.getItem('token');
+async function api(url, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers);
+  if (token()) opts.headers.Authorization = 'Bearer ' + token();
+  if (opts.json !== undefined) { opts.method = opts.method || 'POST'; opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.json); }
+  const r = await fetch(url, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('请求失败 ' + r.status));
+  return d;
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._tm); t._tm = setTimeout(() => t.style.display = 'none', 2600); }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const todayStr = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+/* 登录 */
+async function doLogin() {
+  try {
+    const d = await api('/api/login', { json: { username: $('#loginUser').value.trim(), password: $('#loginPass').value } });
+    localStorage.setItem('token', d.token);
+    boot();
+  } catch (e) { $('#loginErr').textContent = e.message; }
+}
+function logout() { localStorage.removeItem('token'); location.reload(); }
+
+/* 初始化 */
+let zones = [], selectedZones = new Set();
+async function boot() {
+  try { const me = await api('/api/me'); if (me.user.role !== 'admin') throw new Error('请使用主管账号登录'); $('#meName').textContent = me.user.name; }
+  catch (e) { localStorage.removeItem('token'); $('#loginView').hidden = false; $('#app').hidden = true; return; }
+  $('#loginView').hidden = true; $('#app').hidden = false;
+  $('#fDate').value = todayStr(); $('#qDate').value = todayStr(); $('#iDate').value = todayStr();
+  await Promise.all([loadZones(), loadCleaners()]);
+  loadTasks(); loadInspections(); loadComplaints();
+}
+async function loadZones() {
+  zones = await api('/api/zones');
+  renderZonePicker(); renderZoneTable();
+}
+async function loadCleaners() {
+  const cs = await api('/api/cleaners');
+  $('#fCleaner').innerHTML = cs.map(c => `<option value="${c.id}">${esc(c.name)}(${esc(c.username)})</option>`).join('');
+}
+
+/* 点位选择器 */
+function renderZonePicker() {
+  const byFloor = {};
+  zones.forEach(z => (byFloor[z.floor] = byFloor[z.floor] || []).push(z));
+  $('#zonePicker').innerHTML = Object.keys(byFloor).sort().map(f =>
+    `<div class="floor-group"><div class="floor-title">${esc(f)}</div>` +
+    byFloor[f].map(z => `<span class="zone-chip ${selectedZones.has(z.id) ? 'sel' : ''}" data-id="${z.id}" onclick="toggleZone(${z.id})">${esc(z.name)}</span>`).join('') +
+    '</div>').join('');
+}
+function toggleZone(id) { selectedZones.has(id) ? selectedZones.delete(id) : selectedZones.add(id); renderZonePicker(); }
+function pickType(type) { selectedZones = new Set(type ? zones.filter(z => z.type === type).map(z => z.id) : []); renderZonePicker(); }
+
+/* 排班 */
+async function createTasks() {
+  if (!selectedZones.size) return toast('请先选择点位');
+  try {
+    const d = await api('/api/tasks', { json: { zone_ids: [...selectedZones], cleaner_id: +$('#fCleaner').value,
+      date: $('#fDate').value, start_time: $('#fStart').value, deadline: $('#fDeadline').value } });
+    toast(`已创建 ${d.created} 条任务`); selectedZones.clear(); renderZonePicker(); loadTasks();
+  } catch (e) { toast(e.message); }
+}
+async function loadTasks() {
+  const q = new URLSearchParams({ date: $('#qDate').value });
+  if ($('#qStatus').value) q.set('status', $('#qStatus').value);
+  const rows = await api('/api/tasks?' + q);
+  const sum = { pending: 0, done: 0, missed: 0 };
+  rows.forEach(r => sum[r.status]++);
+  $('#taskSummary').textContent = `共${rows.length}条 · 待巡检${sum.pending} · 已完成${sum.done} · 已超时${sum.missed}`;
+  $('#taskBody').innerHTML = rows.map(r => `<tr>
+    <td>${r.start_time} - ${r.deadline}</td><td>${esc(r.zone_name)}</td><td>${esc(r.floor)}</td>
+    <td><span class="badge b-${r.type}">${r.type_label}</span></td><td>${esc(r.cleaner_name)}</td>
+    <td><span class="badge s-${r.status}">${r.status_label}</span></td>
+    <td>${r.status !== 'done' ? `<button class="btn sm red" onclick="delTask(${r.id})">删除</button>` : ''}</td>
+  </tr>`).join('') || '<tr><td colspan="7" class="muted">当日暂无任务</td></tr>';
+}
+async function delTask(id) { if (!confirm('确认删除该任务?')) return; await api('/api/tasks/' + id, { method: 'DELETE' }); loadTasks(); }
+
+/* 点位 */
+async function addZone() {
+  try {
+    await api('/api/zones', { json: { code: $('#zCode').value, name: $('#zName').value, type: $('#zType').value, floor: $('#zFloor').value } });
+    toast('点位已添加'); $('#zCode').value = $('#zName').value = $('#zFloor').value = ''; loadZones();
+  } catch (e) { toast(e.message); }
+}
+function renderZoneTable() {
+  $('#zoneBody').innerHTML = zones.map(z => `<tr><td>${esc(z.code)}</td><td>${esc(z.name)}</td>
+    <td><span class="badge b-${z.type}">${z.type_label}</span></td><td>${esc(z.floor)}</td></tr>`).join('');
+}
+
+/* 巡检记录 */
+async function loadInspections() {
+  const rows = await api('/api/inspections?date=' + $('#iDate').value);
+  $('#inspBody').innerHTML = rows.map(r => `<tr>
+    <td>${esc(r.checked_at)}</td><td>${esc(r.zone_name)}</td>
+    <td><span class="badge b-${r.type}">${r.type_label}</span></td><td>${esc(r.cleaner_name)}</td>
+    <td>${r.photo ? `<img class="thumb" src="/uploads/${r.photo}" onclick="showImg('/uploads/${r.photo}')">` : '<span class="muted">无</span>'}</td>
+    <td>${esc(r.note || '')}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">当日暂无巡检记录</td></tr>';
+}
+function showImg(src) { $('#imgModalImg').src = src; $('#imgModal').style.display = 'flex'; }
+
+/* 投诉追踪 */
+async function loadComplaints() {
+  const rows = await api('/api/complaints');
+  const open = rows.filter(r => r.status === 'open').length;
+  $('#openCount').style.display = open ? '' : 'none'; $('#openCount').textContent = open;
+  const SL = { open: '待处理', processing: '处理中', resolved: '已解决' };
+  $('#complaintList').innerHTML = rows.map(c => `<div class="complaint">
+    <div class="row">
+      <span class="badge c-${c.status}">${SL[c.status]}</span>
+      <b>#${c.id} ${esc(c.zone_name)}</b><span class="badge b-${c.type}">${c.type_label}</span>
+      <span class="muted">${esc(c.created_at)}</span>
+      <span style="margin-left:auto">
+        ${c.status !== 'processing' && c.status !== 'resolved' ? `<button class="btn sm gray" onclick="setCStatus(${c.id},'processing')">开始处理</button>` : ''}
+        ${c.status !== 'resolved' ? `<button class="btn sm" onclick="setCStatus(${c.id},'resolved')">标记解决</button>` : ''}
+      </span>
+    </div>
+    <div style="margin-top:6px">${esc(c.content)}</div>
+    ${c.contact ? `<div class="muted">联系方式: ${esc(c.contact)}</div>` : ''}
+    <div class="trace">🔍 <b>巡检追溯:</b>
+      ${c.insp_time
+        ? `该点位最近一次巡检为 <b>${esc(c.insp_time)}</b>,责任人 <b>${esc(c.insp_cleaner)}</b>,距投诉约 <b>${c.minutes_since_inspection} 分钟</b>
+           ${c.insp_photo ? `<img class="thumb" style="vertical-align:middle;margin-left:8px" src="/uploads/${c.insp_photo}" onclick="showImg('/uploads/${c.insp_photo}')">` : ''}`
+        : '该点位暂无巡检记录,请核查排班覆盖情况'}
+    </div>
+  </div>`).join('') || '<div class="muted">暂无投诉</div>';
+}
+async function setCStatus(id, status) { await api('/api/complaints/' + id, { method: 'PUT', json: { status } }); loadComplaints(); }
+
+/* 页签 */
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== 'tab-' + b.dataset.tab);
+  if (b.dataset.tab === 'complaints') loadComplaints();
+});
+
+if (token()) boot();
+$('#loginPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+</script>
+</body>
+</html>

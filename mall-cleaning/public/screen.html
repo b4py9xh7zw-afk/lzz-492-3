@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>保洁巡检大屏</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0b1220;color:#e2e8f0;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;padding:18px 24px}
+  header{display:flex;align-items:baseline;gap:20px;border-bottom:2px solid #1e293b;padding-bottom:14px}
+  header h1{font-size:30px;letter-spacing:2px;background:linear-gradient(90deg,#60a5fa,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent}
+  header .date{color:#94a3b8;font-size:16px}
+  header .clock{margin-left:auto;font-size:34px;font-variant-numeric:tabular-nums;color:#60a5fa;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:18px 0}
+  .stat{background:#111c30;border:1px solid #1e293b;border-radius:14px;padding:16px;text-align:center}
+  .stat b{font-size:40px;display:block;font-variant-numeric:tabular-nums}
+  .stat span{color:#94a3b8;font-size:15px}
+  .c-total b{color:#93c5fd}.c-done b{color:#34d399}.c-pending b{color:#fbbf24}.c-missed b{color:#f87171}.c-complaint b{color:#fb923c}
+  main{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+  .card{background:#111c30;border:1px solid #1e293b;border-radius:14px;padding:16px;overflow:hidden}
+  .card h2{font-size:19px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card h2 .dot{width:10px;height:10px;border-radius:50%;background:#f87171;display:inline-block}
+  table{width:100%;border-collapse:collapse;font-size:16px}
+  th{color:#64748b;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid #1e293b;font-size:14px}
+  td{padding:10px;border-bottom:1px solid #16233a}
+  .badge{display:inline-block;padding:2px 12px;border-radius:99px;font-size:13px}
+  .b-restroom{background:#1e3a8a33;color:#93c5fd}.b-dining{background:#7c2d1233;color:#fdba74}.b-escalator{background:#14532d33;color:#86efac}
+  .s-pending{background:#713f1233;color:#fde047}.s-missed{background:#7f1d1d44;color:#fca5a5;animation:blink 1.2s infinite}
+  @keyframes blink{50%{opacity:.45}}
+  .scroll-box{max-height:56vh;overflow:hidden;position:relative}
+  .feed-item{padding:9px 4px;border-bottom:1px solid #16233a;font-size:15px;display:flex;gap:8px;align-items:center}
+  .feed-item .t{color:#34d399;font-variant-numeric:tabular-nums}
+  .complaint-item{padding:10px;border:1px solid #7f1d1d55;background:#7f1d1d22;border-radius:10px;margin-bottom:10px;font-size:14px}
+  .complaint-item .head{color:#fca5a5;font-weight:600;margin-bottom:4px}
+  .muted{color:#64748b}
+  footer{margin-top:14px;text-align:center;color:#475569;font-size:13px}
+  @media(max-width:900px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏬 商场保洁巡检实时大屏</h1>
+  <span class="date" id="dateText"></span>
+  <span class="clock" id="clock">--:--:--</span>
+</header>
+
+<div class="stats">
+  <div class="stat c-total"><b id="stTotal">0</b><span>今日任务总数</span></div>
+  <div class="stat c-done"><b id="stDone">0</b><span>已完成</span></div>
+  <div class="stat c-pending"><b id="stPending">0</b><span>待巡检</span></div>
+  <div class="stat c-missed"><b id="stMissed">0</b><span>已超时</span></div>
+  <div class="stat c-complaint"><b id="stComplaint">0</b><span>未结投诉</span></div>
+</div>
+
+<main>
+  <div class="card">
+    <h2><span class="dot"></span>当前未完成点位</h2>
+    <table>
+      <thead><tr><th>楼层</th><th>点位</th><th>类型</th><th>责任人</th><th>截止时间</th><th>状态</th></tr></thead>
+    </table>
+    <div class="scroll-box" id="scrollBox">
+      <table><tbody id="pendingBody"></tbody></table>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:16px">
+      <h2>✅ 最新完成巡检</h2>
+      <div id="doneFeed"></div>
+    </div>
+    <div class="card">
+      <h2>⚠️ 投诉预警</h2>
+      <div id="complaintList"></div>
+    </div>
+  </div>
+</main>
+<footer>数据每 10 秒自动刷新 · 商场物业保洁管理部</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+setInterval(() => { $('#clock').textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }); }, 1000);
+
+async function refresh() {
+  try {
+    const d = await (await fetch('/api/screen')).json();
+    $('#dateText').textContent = d.date + ' ' + new Date().toLocaleDateString('zh-CN', { weekday: 'long' });
+    $('#stTotal').textContent = d.stats.total;
+    $('#stDone').textContent = d.stats.done;
+    $('#stPending').textContent = d.stats.pending;
+    $('#stMissed').textContent = d.stats.missed;
+    $('#stComplaint').textContent = d.complaints.length;
+
+    $('#pendingBody').innerHTML = d.pending.map(t => `<tr>
+      <td>${esc(t.floor)}</td><td>${esc(t.zone_name)}</td>
+      <td><span class="badge b-${t.type}">${t.type_label}</span></td>
+      <td>${esc(t.cleaner_name)}</td><td>${t.deadline}</td>
+      <td><span class="badge s-${t.status}">${t.status_label}</span></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#34d399;padding:30px">🎉 所有点位均已完成</td></tr>';
+
+    $('#doneFeed').innerHTML = d.recentDone.map(r => `<div class="feed-item">
+      <span class="t">${esc(r.checked_at.slice(11, 16))}</span><span>${esc(r.cleaner_name)}</span>
+      <span class="muted">${esc(r.zone_name)}</span></div>`).join('') || '<div class="muted">今日暂无完成记录</div>';
+
+    $('#complaintList').innerHTML = d.complaints.map(c => `<div class="complaint-item">
+      <div class="head">#${c.id} ${esc(c.zone_name)} · ${esc(c.created_at.slice(11, 16))}</div>
+      <div>${esc(c.content)}</div></div>`).join('') || '<div class="muted">暂无未结投诉</div>';
+  } catch (e) { console.error(e); }
+}
+refresh();
+setInterval(refresh, 10000);
+
+/* 未完成点位过多时自动滚动 */
+setInterval(() => {
+  const box = $('#scrollBox');
+  if (box.scrollHeight <= box.clientHeight) return;
+  box.scrollTop += 1;
+  if (box.scrollTop + box.clientHeight >= box.scrollHeight - 1) {
+    clearTimeout(box._tm); box._tm = setTimeout(() => box.scrollTop = 0, 2500);
+  }
+}, 60);
+</script>
+</body>
+</html>

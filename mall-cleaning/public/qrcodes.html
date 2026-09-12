@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>点位二维码打印</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f1f5f9;color:#1e293b;padding:20px}
+  .bar{max-width:1100px;margin:0 auto 16px;display:flex;align-items:center;gap:12px}
+  .bar h1{font-size:20px}
+  .btn{background:#2563eb;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:14px}
+  .tip{color:#64748b;font-size:13px}
+  .grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .card h2{font-size:16px;margin-bottom:2px}
+  .card .code{color:#64748b;font-size:12px;margin-bottom:10px}
+  .qrs{display:flex;gap:12px}
+  .qr{flex:1;text-align:center}
+  .qr img{width:100%;max-width:130px;border:1px solid #e2e8f0;border-radius:8px}
+  .qr div{font-size:12px;margin-top:4px;color:#334155}
+  @media print {.bar{display:none} body{background:#fff} .card{break-inside:avoid;box-shadow:none;border:1px solid #cbd5e1}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>🖨️ 点位二维码</h1>
+  <button class="btn" onclick="window.print()">打印本页</button>
+  <span class="tip">左: 员工签到码(贴于点位) · 右: 顾客投诉码 · 二维码内容基于当前访问地址生成</span>
+</div>
+<div class="grid" id="grid"></div>
+<script>
+fetch('/api/zones').then(r => r.json()).then(zones => {
+  document.getElementById('grid').innerHTML = zones.map(z => `
+    <div class="card">
+      <h2>${z.name}</h2>
+      <div class="code">编码: ${z.code} · ${z.floor} · ${z.type_label}</div>
+      <div class="qrs">
+        <div class="qr"><img src="/api/zones/${z.id}/qrcode?type=checkin"><div>员工签到</div></div>
+        <div class="qr"><img src="/api/zones/${z.id}/qrcode?type=complaint"><div>顾客投诉</div></div>
+      </div>
+    </div>`).join('');
+});
+</script>
+</body>
+</html>

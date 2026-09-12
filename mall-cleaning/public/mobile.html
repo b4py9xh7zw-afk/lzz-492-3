@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>保洁员工作台</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f1f5f9;color:#1e293b;max-width:520px;margin:0 auto}
+  header{background:#1e3a8a;color:#fff;padding:14px 16px;position:sticky;top:0;z-index:10}
+  header h1{font-size:17px}
+  header .sub{font-size:12px;color:#bfdbfe;margin-top:2px}
+  .stats{display:flex;gap:8px;padding:12px 16px 0}
+  .stat{flex:1;background:#fff;border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .stat b{font-size:20px;display:block}
+  .stat span{font-size:12px;color:#64748b}
+  .task{background:#fff;border-radius:12px;margin:10px 16px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .task .time{font-size:13px;color:#64748b}
+  .task .name{font-size:17px;font-weight:600;margin:4px 0}
+  .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px}
+  .b-restroom{background:#dbeafe;color:#1d4ed8}.b-dining{background:#ffedd5;color:#c2410c}.b-escalator{background:#dcfce7;color:#15803d}
+  .s-pending{background:#fef9c3;color:#a16207}.s-done{background:#dcfce7;color:#15803d}.s-missed{background:#fee2e2;color:#b91c1c}
+  .btn{background:#2563eb;color:#fff;border:none;padding:10px 18px;border-radius:10px;font-size:15px;cursor:pointer}
+  .btn.block{width:100%;padding:13px;font-size:16px;margin-top:10px}
+  .btn.gray{background:#64748b}
+  .task.done{opacity:.75}
+  .thumb{width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-top:8px}
+  /* 登录 */
+  #loginView{padding:60px 20px}
+  #loginView .card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+  #loginView h1{font-size:20px;margin-bottom:4px}
+  #loginView .tip{color:#64748b;font-size:13px;margin-bottom:16px}
+  input,textarea{border:1px solid #cbd5e1;border-radius:10px;padding:11px 12px;font-size:15px;width:100%;font-family:inherit}
+  #loginView input{margin-bottom:12px}
+  /* 签到弹层 */
+  .sheet-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:#fff;border-radius:16px 16px 0 0;padding:20px;display:none;z-index:51;max-height:92vh;overflow:auto}
+  .sheet h2{font-size:17px;margin-bottom:2px}
+  .sheet .zone-info{font-size:13px;color:#64748b;margin-bottom:14px}
+  .photo-btn{display:block;border:2px dashed #94a3b8;border-radius:12px;padding:22px;text-align:center;color:#475569;font-size:15px;cursor:pointer;margin-bottom:12px}
+  .photo-btn.has{border-style:solid;border-color:#16a34a;color:#16a34a}
+  #photoPreview{width:100%;border-radius:10px;margin-bottom:12px;display:none}
+  .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:10px;z-index:99;display:none;font-size:14px;max-width:90vw}
+  .empty{text-align:center;color:#94a3b8;padding:40px 0;font-size:14px}
+  .topbar{display:flex;align-items:center;gap:10px}
+  .topbar .right{margin-left:auto;font-size:13px}
+  .topbar a{color:#bfdbfe;text-decoration:none;margin-left:10px}
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="card">
+    <h1>🧹 保洁员工作台</h1>
+    <div class="tip">请使用员工账号登录(演示: zhang / 123456)</div>
+    <input id="loginUser" placeholder="工号/用户名">
+    <input id="loginPass" type="password" placeholder="密码">
+    <button class="btn block" onclick="doLogin()">登 录</button>
+    <div id="loginErr" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1>🧹 我的巡检路线</h1>
+        <div class="sub"><span id="meName"></span> · <span id="today"></span> · 仅显示本人任务</div>
+      </div>
+      <div class="right">
+        <a href="javascript:loadTasks()">刷新</a>
+        <a href="javascript:logout()">退出</a>
+      </div>
+    </div>
+  </header>
+  <div class="stats">
+    <div class="stat"><b id="cPending" style="color:#a16207">0</b><span>待巡检</span></div>
+    <div class="stat"><b id="cDone" style="color:#15803d">0</b><span>已完成</span></div>
+    <div class="stat"><b id="cMissed" style="color:#b91c1c">0</b><span>已超时</span></div>
+  </div>
+  <div id="taskList"></div>
+  <div style="padding:0 16px 30px">
+    <button class="btn gray block" onclick="openSheet(null)">📷 扫码签到(额外巡检)</button>
+  </div>
+</div>
+
+<!-- 签到弹层 -->
+<div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <h2 id="sheetTitle">扫码签到</h2>
+  <div class="zone-info" id="sheetZoneInfo"></div>
+  <label style="font-size:13px;color:#475569">点位编码(扫点位二维码自动填入,也可手动输入)</label>
+  <input id="ckCode" placeholder="如 1F-WS-E" style="margin:6px 0 12px">
+  <label class="photo-btn" id="photoBtn">📷 点击拍摄现场照片(必传)
+    <input type="file" id="ckPhoto" accept="image/*" capture="environment" hidden>
+  </label>
+  <img id="photoPreview">
+  <input id="ckNote" placeholder="备注(选填): 如发现设施损坏等" style="margin-bottom:4px">
+  <button class="btn block" onclick="submitCheckin()">确认签到</button>
+  <button class="btn gray block" onclick="closeSheet()">取消</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const token = () => localStorage.getItem('token');
+async function api(url, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers);
+  if (token()) opts.headers.Authorization = 'Bearer ' + token();
+  if (opts.json !== undefined) { opts.method = opts.method || 'POST'; opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.json); }
+  const r = await fetch(url, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('请求失败 ' + r.status));
+  return d;
+}
+function toast(msg, ms = 3000) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._tm); t._tm = setTimeout(() => t.style.display = 'none', ms); }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let myTasks = [], currentTaskId = null;
+
+async function doLogin() {
+  try {
+    const d = await api('/api/login', { json: { username: $('#loginUser').value.trim(), password: $('#loginPass').value } });
+    if (d.user.role !== 'cleaner') { $('#loginErr').textContent = '该账号不是保洁员,请使用员工账号'; return; }
+    localStorage.setItem('token', d.token);
+    boot();
+  } catch (e) { $('#loginErr').textContent = e.message; }
+}
+function logout() { localStorage.removeItem('token'); location.href = '/mobile.html'; }
+
+async function boot() {
+  let me;
+  try { me = (await api('/api/me')).user; if (me.role !== 'cleaner') throw 0; }
+  catch { localStorage.removeItem('token'); $('#loginView').hidden = false; $('#app').hidden = true; return; }
+  $('#meName').textContent = me.name;
+  $('#today').textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+  $('#loginView').hidden = true; $('#app').hidden = false;
+  await loadTasks();
+  handleHash(); // 处理扫码进入的 #/checkin/CODE
+}
+
+async function loadTasks() {
+  myTasks = await api('/api/my/tasks');
+  const sum = { pending: 0, done: 0, missed: 0 };
+  myTasks.forEach(t => sum[t.status]++);
+  $('#cPending').textContent = sum.pending; $('#cDone').textContent = sum.done; $('#cMissed').textContent = sum.missed;
+  $('#taskList').innerHTML = myTasks.map(t => `
+    <div class="task ${t.status === 'done' ? 'done' : ''}">
+      <div class="time">🕐 ${t.start_time} - ${t.deadline} 前完成</div>
+      <div class="name">${esc(t.zone_name)}</div>
+      <span class="badge b-${t.type}">${t.type_label}</span>
+      <span class="badge s-${t.status}">${t.status_label}</span>
+      ${t.status === 'done'
+        ? `<div style="font-size:13px;color:#15803d;margin-top:6px">✓ 已于 ${esc((t.checked_at||'').slice(11,16))} 签到</div>
+           ${t.photo ? `<img class="thumb" src="/uploads/${t.photo}">` : ''}`
+        : `<button class="btn block" onclick="openSheet(${t.id})">📷 到点扫码签到</button>`}
+    </div>`).join('') || '<div class="empty">今日暂无巡检任务 🎉</div>';
+}
+
+/* 签到弹层 */
+function openSheet(taskId, presetCode) {
+  currentTaskId = taskId || null;
+  const t = myTasks.find(x => x.id === taskId);
+  $('#sheetTitle').textContent = t ? '签到: ' + t.zone_name : '扫码签到';
+  $('#sheetZoneInfo').textContent = t ? `任务时间窗 ${t.start_time} - ${t.deadline} · ${t.type_label}` : '请扫描点位二维码或输入点位编码';
+  $('#ckCode').value = t ? t.zone_code : (presetCode || '');
+  $('#ckCode').readOnly = !!t;
+  $('#ckNote').value = ''; $('#ckPhoto').value = '';
+  $('#photoPreview').style.display = 'none'; $('#photoBtn').classList.remove('has');
+  $('#photoBtn').firstChild.textContent = '📷 点击拍摄现场照片(必传)';
+  $('#sheetMask').style.display = 'block'; $('#sheet').style.display = 'block';
+}
+function closeSheet() { $('#sheetMask').style.display = 'none'; $('#sheet').style.display = 'none'; }
+
+$('#ckPhoto').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $('#photoBtn').classList.add('has');
+  $('#photoBtn').firstChild.textContent = '✓ 已选择照片,点击可重拍';
+  const img = $('#photoPreview'); img.src = URL.createObjectURL(f); img.style.display = 'block';
+});
+
+async function submitCheckin() {
+  const code = $('#ckCode').value.trim();
+  const file = $('#ckPhoto').files[0];
+  if (!code) return toast('请填写或扫描点位编码');
+  if (!file) return toast('请拍摄现场照片');
+  const fd = new FormData();
+  fd.append('zone_code', code);
+  if (currentTaskId) fd.append('task_id', currentTaskId);
+  fd.append('note', $('#ckNote').value);
+  fd.append('photo', file);
+  try {
+    const d = await api('/api/checkin', { method: 'POST', body: fd });
+    toast((d.late ? '⚠️ ' : '✅ ') + d.message);
+    closeSheet(); loadTasks();
+  } catch (e) { toast('❌ ' + e.message, 4000); }
+}
+
+/* 扫点位二维码进入: #/checkin/CODE */
+function handleHash() {
+  const m = location.hash.match(/^#\/checkin\/(.+)$/);
+  if (!m) return;
+  const code = decodeURIComponent(m[1]);
+  const t = myTasks.find(x => x.zone_code === code && x.status !== 'done');
+  openSheet(t ? t.id : null, code);
+  if (t) toast('已匹配任务: ' + t.zone_name);
+  history.replaceState(null, '', '/mobile.html');
+}
+window.addEventListener('hashchange', handleHash);
+
+if (token()) boot();
+$('#loginPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+</script>
+</body>
+</html>

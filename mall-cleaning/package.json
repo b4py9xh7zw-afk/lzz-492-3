@@ -1,0 +1,16 @@
+{
+  "name": "mall-cleaning-inspection",
+  "version": "1.0.0",
+  "private": true,
+  "description": "商场保洁巡检排班系统",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.21.2",
+    "multer": "^2.0.1",
+    "qrcode": "^1.5.4"
+  }
+}
